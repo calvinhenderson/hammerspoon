@@ -57,6 +57,56 @@ local KEY_GLYPHS = {
 	["space"] = "␣",
 }
 
+local TO_SHIFTED = {
+	["a"] = "A",
+	["b"] = "B",
+	["c"] = "C",
+	["d"] = "D",
+	["e"] = "E",
+	["f"] = "F",
+	["g"] = "G",
+	["h"] = "H",
+	["i"] = "I",
+	["j"] = "J",
+	["k"] = "K",
+	["l"] = "L",
+	["m"] = "M",
+	["n"] = "N",
+	["o"] = "O",
+	["p"] = "P",
+	["q"] = "Q",
+	["r"] = "R",
+	["s"] = "S",
+	["t"] = "T",
+	["u"] = "U",
+	["v"] = "V",
+	["w"] = "W",
+	["x"] = "X",
+	["y"] = "Y",
+	["z"] = "Z",
+	["`"] = "~",
+	["1"] = "!",
+	["2"] = "@",
+	["3"] = "#",
+	["4"] = "$",
+	["5"] = "%",
+	["6"] = "^",
+	["7"] = "&",
+	["8"] = "*",
+	["9"] = "(",
+	["0"] = ")",
+	["-"] = "_",
+	["="] = "+",
+	["["] = "{",
+	["]"] = "}",
+	["\\"] = "|",
+	[";"] = ":",
+	["'"] = '"',
+	[","] = "<",
+	["."] = ">",
+	["/"] = "?",
+}
+
 local function r(x, y, w, h)
 	return { x = x, y = y, w = w, h = h }
 end
@@ -121,7 +171,7 @@ function Cheatsheet:shortcut_label(shortcut)
 	if shortcut and shortcut.metadata and shortcut.metadata.name then
 		return shortcut.metadata.name
 	else
-		return "→"
+		return ""
 	end
 end
 
@@ -131,12 +181,20 @@ end
 
 function Cheatsheet:shortcut_hotkey(str)
 	local hotkey = ""
-	local mods = split(str, "-")
+	-- Make sure we handle the edge case of str == '-'
+	local mods = str ~= "-" and split(str, "-") or { str }
 	local key = table.remove(mods, #mods)
 	table.sort(mods)
+
+	if mods[#mods] == "shift" and TO_SHIFTED[key] then
+		table.remove(mods, #mods)
+		key = TO_SHIFTED[key]
+	end
+
 	for _, m in ipairs(mods) do
 		hotkey = hotkey .. (MODIFIER_GLYPHS[m] or m)
 	end
+
 	return hotkey .. (KEY_GLYPHS[key] or key)
 end
 
@@ -155,12 +213,14 @@ function Cheatsheet:template_shortcuts(shortcuts)
 	end
 
 	table.sort(sorted_keys, function(a, b)
-		return a.k < b.k
+		local is_a_table = type(a.v) == "table"
+		local is_b_table = type(b.v) == "table"
+		return ((is_a_table and is_b_table) and (a.k < b.k)) or (is_a_table and not is_b_table) or (a.k < b.k)
 	end)
 
-	local back = { k = "delete", v = { metadata = { name = "Back" } } }
-	local cancel = { k = "escape", v = { metadata = { name = "Cancel" } } }
-	local exit = { k = "escape", v = { metadata = { name = "Exit" } } }
+	local back = { system = true, k = "delete", v = { metadata = { name = "Back" } } }
+	local cancel = { system = true, k = "escape", v = { metadata = { name = "Cancel" } } }
+	local exit = { system = true, k = "escape", v = { metadata = { name = "Exit" } } }
 
 	-- These shorcuts are hard-coded
 	if self.Vi:numEvents() > 0 then
@@ -173,6 +233,12 @@ function Cheatsheet:template_shortcuts(shortcuts)
 	for _, shortcut in ipairs(sorted_keys) do
 		local hotkey = self:shortcut_hotkey(shortcut.k)
 		local label = self:shortcut_label(shortcut.v)
+
+		-- Add an arrow for nested keybinds
+		if type(shortcut.v) == "table" and not shortcut.system and not shortcut.v.action then
+			label = label .. " →"
+		end
+
 		s = s
 			.. string.format(
 				[[
@@ -227,20 +293,19 @@ function Cheatsheet:show(shortcuts)
 
 	self.view:windowTitle(title)
 
-	local frame = hs.screen.mainScreen():fullFrame()
-	local width = 200
-	local height = 400 + (#shortcuts * 100)
+	local frame = hs.screen.mainScreen():frame()
+	local width = 250
 	self.view:frame({
 		x = frame.w - width,
-		y = frame.h - height,
+		y = frame.y,
 		w = width,
-		h = height,
+		h = frame.h,
 	})
 
 	local css = self:resource("cheatsheet.css")
 	local template = self:build_template(icon, title, self.description, self.shortcuts, css)
 	self.view:html(template)
-
+	self.view:transparent(true)
 	self.view:show()
 end
 

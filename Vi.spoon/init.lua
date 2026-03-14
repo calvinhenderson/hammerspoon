@@ -119,12 +119,13 @@ function Vi:config(key, default)
 end
 
 function Vi:alert()
-	return self.Alert.alert()
+	return self.Alert:alert()
 end
 
 -- Helper to minify function calls in the key mappings
 function Vi._(fn, ...)
 	local args = table.pack(...)
+	assert(type(fn) == "function", "invalid function given " .. hs.inspect(fn))
 	return function(...)
 		local all = table.pack(...)
 
