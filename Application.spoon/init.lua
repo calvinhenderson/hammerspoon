@@ -40,7 +40,6 @@ function Application._match(window, matchtexts)
 			return true
 		end
 	end
-	print("not matching title:" .. title .. "or bundleid:" .. bundleid)
 	return false
 end
 
@@ -52,7 +51,7 @@ function Application._apps_by_bundle_id()
 	Application._apps_bundle_ids = {}
 	for _, v in pairs(Application.Apps) do
 		if v.bundleid then
-			Application[v.bundleid] = v
+			Application._apps_bundle_ids[v.bundleid] = v
 		end
 	end
 
@@ -65,7 +64,7 @@ function Application._app_module_fn(bundleid, fn)
 		bundleid = hs.application.frontmostApplication():bundleID()
 	end
 
-	local app = Application._apps_bundle_ids()[bundleid]
+	local app = Application._apps_by_bundle_id()[bundleid]
 	if type(app) == "table" and type(app[fn]) == "function" then
 		app[fn]()
 		return true
@@ -127,14 +126,14 @@ function Application.new_window(bundleid)
 end
 
 function Application.prev_tab(bundleid)
-	if Application._app_module_fn(bundleid, "prev_tab") then
+	if not Application._app_module_fn(bundleid, "prev_tab") then
 		-- no default action
 		return nil
 	end
 end
 
 function Application.next_tab(bundleid)
-	if Application._app_module_fn(bundleid, "next_tab") then
+	if not Application._app_module_fn(bundleid, "next_tab") then
 		-- no default action
 		return nil
 	end
