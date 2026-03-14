@@ -4,9 +4,7 @@ package:
 		{ [ ! -d $$d ] || [ "$$d" = "./EmmyLua.spoon" ]; } && continue; \
 		\
 		echo "[Packaging] $$d"; \
-		cd "$$d"; \
-		zip -r "../release/$$(basename $$d).zip" "."; \
-		cd ..; \
+		zip -r "./release/$$(basename $$d).zip" "$$d"; \
 	done
 
 .PHONY: package
