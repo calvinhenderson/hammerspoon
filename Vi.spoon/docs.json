@@ -1,6 +1,8 @@
 [
   {
     "name": "Vi",
+    "desc": "Enables system-wide Vi-style modal keybindings.",
+    "doc": "Enables system-wide Vi-style modal keybindings.\n\nDownload: [https://github.com/calvinhenderson/hammerspoon/releases/download/latest/Vi.spoon.zip](https://github.com/calvinhenderson/hammerspoon/releases/download/latest/Vi.spoon.zip)",
     "type": "Module"
   }
 ]

@@ -1,6 +1,8 @@
 [
   {
     "name": "ScrollButton",
+    "desc": "Allows holding a mouse button press or key to enable mouse-drag scrolling.",
+    "doc": "Allows holding a mouse button or key to enable mouse-drag scrolling.\n\nDownload: [https://github.com/calvinhenderson/hammerspoon/releases/download/latest/ScrollButton.spoon.zip](https://github.com/calvinhenderson/hammerspoon/releases/download/latest/ScrollButton.spoon.zip)",
     "type": "Module"
   }
 ]

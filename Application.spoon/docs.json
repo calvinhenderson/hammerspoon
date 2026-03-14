@@ -1,6 +1,8 @@
 [
   {
     "name": "Application",
+    "desc": "Generic application helpers including app-specific overrides and other helpers.",
+    "doc": "Generic application helpers including app-specific overrides and other helpers.\n\nDownload: [https://github.com/calvinhenderson/hammerspoon/releases/download/latest/Application.spoon.zip](https://github.com/calvinhenderson/hammerspoon/releases/download/latest/Application.spoon.zip)",
     "type": "Module"
   }
 ]

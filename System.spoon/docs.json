@@ -1,6 +1,8 @@
 [
   {
     "name": "System",
+    "desc": "Convenience functions for interacting with the system.",
+    "doc": "Convenience functions for interacting with the system.\n\nDownload: [https://github.com/calvinhenderson/hammerspoon/releases/download/latest/System.spoon.zip](https://github.com/calvinhenderson/hammerspoon/releases/download/latest/System.spoon.zip)",
     "type": "Module"
   }
 ]
