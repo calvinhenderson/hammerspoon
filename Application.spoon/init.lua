@@ -13,8 +13,14 @@ local function load_app(app)
 	return dofile(hs.spoons.resourcePath(path))
 end
 
+--- @class Application.App
+--- @field new_window function? Opens a new application window
+--- @field prev_tab function? Goes to the prev application tab
+--- @field next_tab function? Goes to the next application tab
+
 -- Load application-specific configs
 Application.Apps = {
+	Alacritty = load_app("Alacritty"),
 	Chrome = load_app("chrome"),
 }
 
@@ -36,6 +42,36 @@ function Application._match(window, matchtexts)
 	end
 	print("not matching title:" .. title .. "or bundleid:" .. bundleid)
 	return false
+end
+
+function Application._apps_by_bundle_id()
+	if Application._apps_bundle_ids then
+		return Application._apps_bundle_ids
+	end
+
+	Application._apps_bundle_ids = {}
+	for _, v in pairs(Application.Apps) do
+		if v.bundleid then
+			Application[v.bundleid] = v
+		end
+	end
+
+	return Application._apps_bundle_ids
+end
+
+--- Find an app-specific module for the given bundleid (or the currently focused application)
+function Application._app_module_fn(bundleid, fn)
+	if not bundleid then
+		bundleid = hs.application.frontmostApplication():bundleID()
+	end
+
+	local app = Application._apps_bundle_ids()[bundleid]
+	if type(app) == "table" and type(app[fn]) == "function" then
+		app[fn]()
+		return true
+	else
+		return false
+	end
 end
 
 function Application.find_window(matchtexts)
@@ -81,6 +117,26 @@ function Application.focus_or_launch(matchtexts, launch_fn)
 		w:raise():focus()
 	else
 		launch_fn()
+	end
+end
+
+function Application.new_window(bundleid)
+	if not Application._app_module_fn(bundleid, "new_window") then
+		hs.eventtap.keyStroke({ "cmd" }, "n")
+	end
+end
+
+function Application.prev_tab(bundleid)
+	if Application._app_module_fn(bundleid, "prev_tab") then
+		-- no default action
+		return nil
+	end
+end
+
+function Application.next_tab(bundleid)
+	if Application._app_module_fn(bundleid, "next_tab") then
+		-- no default action
+		return nil
 	end
 end
 
