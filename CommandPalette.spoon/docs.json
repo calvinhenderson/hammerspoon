@@ -1,0 +1,8 @@
+[
+  {
+    "name": "Command Palette",
+    "desc": "Allows easily creating a command palette.",
+    "doc": "Allows easily creating a command palette.\n\nDownload: [https://github.com/calvinhenderson/hammerspoon/releases/download/latest/Vi.spoon.zip](https://github.com/calvinhenderson/hammerspoon/releases/download/latest/Vi.spoon.zip)",
+    "type": "Module"
+  }
+]
