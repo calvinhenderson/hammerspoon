@@ -88,6 +88,10 @@ end
 
 --- @param app_name string The name of the application
 function System.bundleid_for_app_name(app_name)
+	if hs.application.get(app_name) then
+		return hs.application.get(app_name):bundleID()
+	end
+
 	local script = ([[
   get id of application "%s"
   ]]):format(app_name)
@@ -128,10 +132,12 @@ function System.window_chooser(hint, order)
 
 	if hint == "app" then
 		local app = hs.application.frontmostApplication()
-		placeholder = "Search application windows"
-		filter:setAppFilter(app and app:name())
+		if app then
+			placeholder = "Search application windows"
+			filter = hs.window.filter.new(app:name()):setCurrentSpace(nil)
+		end
 	elseif hint == "space" then
-		filter:setCurrentSpace(true)
+		filter = filter:setCurrentSpace(true)
 		placeholder = "Search current space windows"
 	end
 
