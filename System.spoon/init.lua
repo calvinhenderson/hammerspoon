@@ -9,6 +9,7 @@ System.homepage = "https://github.com/calvinhenderson/hammerspoon/blob/main/Syst
 System.license = "MIT - https://opensource.org/licenses/MIT"
 
 System.logger = hs.logger.new("System", "info")
+System.HttpApi = dofile(hs.spoons.resourcePath("http_api.lua"))
 
 function System.focusSpace(space_index, screen)
 	if not screen then
@@ -150,13 +151,13 @@ function System.window_chooser(hint, order)
 			table.insert(choices, {
 				id = w:id(),
 				image = icon,
-				text = w:title(),
+				text = w:title() or app and app:name() or w:id(),
 				subText = app and app:name() or "",
 			})
 		end
 	end
 
-	System.chooser(function(choice)
+	return System.chooser(function(choice)
 		if not choice then
 			return
 		end
@@ -189,7 +190,7 @@ function System.audio_output_chooser()
 		})
 	end
 
-	System.chooser(function(choice)
+	return System.chooser(function(choice)
 		if not choice then
 			return
 		end
@@ -202,6 +203,20 @@ function System.audio_output_chooser()
 			d:setDefaultInputDevice()
 		end
 	end, choices, "Search audio devices"):show()
+end
+
+function System.dynamic_chooser(select_fn, query_change_fn, placeholder, initial_choices)
+	assert(type(select_fn) == "function" and type(query_change_fn) == "function")
+	local chooser = System.chooser(select_fn, initial_choices or {}, placeholder or "")
+	chooser
+		:queryChangedCallback(function(query)
+			if type(query_change_fn) == "function" then
+				query_change_fn(chooser, query)
+			end
+		end)
+		:show()
+
+	return chooser
 end
 
 return System
