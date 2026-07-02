@@ -124,7 +124,10 @@ function Events:handleKeyDown(event)
 		self.listener:stop()
 
 		for _ = 1, count, 1 do
-			node.action()
+			local status, err = pcall(node.action)
+			if not status then
+				print("Error calling action for node", hs.inspect(node), "with error", hs.inspect(err))
+			end
 		end
 
 		self.listener:start()
