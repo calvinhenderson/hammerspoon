@@ -4,8 +4,16 @@ Chrome.__index = Chrome
 
 Chrome.bundleid = "com.google.Chrome"
 
-function Chrome.launch_profile(profile)
-	hs.execute(string.format("open -nb %s --args --profile-directory='%s'", Chrome.bundleid, profile or "Default"))
+function Chrome.launch_profile(profile, ...)
+	local args = table.concat(table.pack(...), " ")
+	hs.execute(
+		string.format(
+			"open -nb %s --args --profile-directory='%s' %s",
+			Chrome.bundleid,
+			profile or "Default",
+			args or ""
+		)
+	)
 end
 
 function Chrome.prev_tab()

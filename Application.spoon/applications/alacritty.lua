@@ -18,4 +18,19 @@ function Alacritty.next_tab()
 	return true
 end
 
+function Alacritty.interactive_command(command)
+	local command_wait = command .. " ; echo -e 'Press [Return] to continue'; read -r "
+	hs.task
+		.new("/opt/homebrew/bin/alacritty", function(exit_code, stdout, stderr)
+			if exit_code == 0 then
+				return true
+			else
+				hs.alert("Command failed. See logs for details.")
+				print(command, stdout, stderr)
+				return false
+			end
+		end, { "-T", command, "-e", "/bin/zsh", "-lc", command_wait })
+		:start()
+end
+
 return Alacritty

@@ -104,7 +104,7 @@ end
 function Application.focus_window(matchtexts)
 	local w = Application.find_window(matchtexts)
 	if w then
-		w:raise():focus()
+		w:focus()
 	else
 		hs.alert.show("No window open for " .. hs.inspect(matchtexts))
 	end
@@ -113,7 +113,7 @@ end
 function Application.focus_or_launch(matchtexts, launch_fn)
 	local w = Application.find_window(matchtexts)
 	if w then
-		w:raise():focus()
+		w:focus()
 	else
 		launch_fn()
 	end
