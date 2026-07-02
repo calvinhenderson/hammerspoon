@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <style>
+    #actions {
+      display: flex;
+      height: auto;
+      flex-direction: row;
+      gap: 1.5rem;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #actions>button {
+      min-height: 100%;
+    }
+
+    #alarmList {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .card {
+      position: relative;
+    }
+
+    .status-bubble {
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      background-color: #e53935;
+      /* Red for disabled */
+      color: white;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      z-index: 10;
+    }
+
+    button {
+      padding: 0 1rem;
+    }
+
+    /* Button specific colors */
+    button.destructive {
+      border-color: #e53935;
+      color: #e53935;
+    }
+
+    button.destructive:hover {
+      background-color: #e53935;
+      color: white;
+    }
+
+    button.success {
+      border-color: #43a047;
+      color: #43a047;
+    }
+
+    button.success:hover {
+      background-color: #43a047;
+      color: white;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+      z-index: 99;
+    }
+  </style>
+</head>
+
+<body>
+  <header class="container" style="margin-top: 2rem;">
+    <hgroup>
+      <h2>Alarms</h2>
+      <p>Create and edit your alarms.</p>
+    </hgroup>
+  </header>
+
+  <main class="container">
+    <section id="actions">
+      <input type="search" id="searchInput" placeholder="Search alarms by title or description..."
+        oninput="renderAlarms()">
+      <button type="button" style="min-width: max-content;" onclick="openModal()">+ New Alarm</button>
+    </section>
+
+    <section id="alarmList">
+    </section>
+  </main>
+
+  <dialog id="modalOverlay">
+    <article>
+      <form id="alarmForm">
+        <header>
+          <button type="button" aria-label="Close" rel="prev" onclick="closeModal()" class="close"></button>
+          <strong id="modalTitle">Add Alarm</strong>
+        </header>
+
+        <label>
+          Title
+          <input type="text" id="alarmTitle" placeholder="e.g., Drink Water">
+        </label>
+
+        <label>
+          Description
+          <input type="text" id="alarmDesc" placeholder="e.g., Go grab a glass">
+        </label>
+
+        <fieldset role="group">
+          <legend>Type</legend>
+          <label>
+            <input type="radio" name="alarmType" value="duration" checked onchange="toggleType()">
+            Duration
+          </label>
+          <label>
+            <input type="radio" name="alarmType" value="timestamp" onchange="toggleType()">
+            Timestamp
+          </label>
+          <label>
+            <input type="radio" name="alarmType" value="cron" onchange="toggleType()">
+            Cron
+          </label>
+        </fieldset>
+
+        <label id="valueLabel">
+          ISO8601 Duration
+          <input type="text" id="alarmValue" placeholder="e.g., P1D or PT1H30M">
+        </label>
+
+        <footer>
+          <fieldset class="grid">
+            <button type="button" class="outline secondary" onclick="closeModal()">Cancel</button>
+            <button type="submit">Save Alarm</button>
+          </fieldset>
+        </footer>
+      </form>
+    </article>
+  </dialog>
+
+  <dialog id="errorOverlay">
+    <article>
+      <header>
+        <button aria-label="Close" rel="prev" onclick="hideError()" class="close"></button>
+        <strong>Error</strong>
+      </header>
+
+      <h2 id="errorTitle"></h2>
+      <p id="errorMessage"></p>
+
+      <footer>
+        <button class="secondary" onclick="hideError()">Dismiss</button>
+      </footer>
+    </article>
+  </dialog>
+
+  <script>
+    let alarms = {{alarms}};
+    const container = document.getElementById('alarmList');
+    const searchInput = document.getElementById('searchInput');
+
+    // Track if we are editing an existing alarm
+    let editingAlarmId = null;
+
+    document.getElementById('alarmForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      saveAlarm();
+    });
+
+    function renderAlarms() {
+      container.innerHTML = '';
+
+      const query = searchInput.value.toLowerCase().trim();
+
+      // Filter by query, then convert to array and sort by title alphabetically
+      const filteredAndSortedAlarms = Object.values(alarms).filter(alarm => {
+        if (!query) return true;
+
+        const titleMatch = alarm.title && alarm.title.toLowerCase().includes(query);
+        const descMatch = alarm.desc && alarm.desc.toLowerCase().includes(query);
+
+        return titleMatch || descMatch;
+      }).sort((a, b) => {
+        const titleA = a.title ? a.title.toLowerCase() : '';
+        const titleB = b.title ? b.title.toLowerCase() : '';
+        return titleA.localeCompare(titleB);
+      });
+
+      // Render each card
+      for (let alarm of filteredAndSortedAlarms) {
+        addAlarmToTable(alarm);
+      }
+    }
+
+    function addAlarmToTable(alarm) {
+      var article = document.getElementById('card-' + alarm.id);
+
+      const isNew = !article;
+      if (isNew) {
+        article = document.createElement('article');
+        article.className = 'card';
+        article.id = 'card-' + alarm.id;
+      }
+
+      const isCron = !!alarm.cron;
+      const typeStr = isCron ? "Cron" : "Timestamp";
+      const valStr = isCron ? alarm.cron : (alarm.timestamp || "N/A");
+
+      const isEnabled = alarm.disabled != true;
+      const bubbleHtml = !isEnabled ? `<div class="status-bubble">Disabled</div>` : '';
+
+      const toggleClass = isEnabled ? "secondary" : "success";
+      const toggleText = isEnabled ? "Disable" : "Enable";
+
+      article.innerHTML = `
+        ${bubbleHtml}
+        <header>
+          <strong>${alarm.title}</strong>
+        </header>
+
+        <div class="card-body">
+          <p class="desc">${alarm.desc || '<em>No description provided</em>'}</p>
+          <div class="meta">
+            <div><strong>Type:</strong> ${typeStr}</div>
+            <div><strong>Value:</strong> <code>${valStr}</code></div>
+          </div>
+        </div>
+
+        <footer>
+          <button class="outline ${toggleClass}" onclick="toggleEnable('${alarm.id}')">${toggleText}</button>
+          <button class="outline" onclick="editAlarm('${alarm.id}')">Edit</button>
+          <button class="outline destructive" onclick="deleteAlarm('${alarm.id}')">Delete</button>
+        </footer>
+      `;
+
+      container.appendChild(article);
+      alarms[alarm.id] = alarm;
+    }
+
+    function deleteAlarm(id) {
+      window.webkit.messageHandlers.alarms_ui.postMessage({
+        action: 'delete',
+        payload: {id: id}
+      });
+    }
+
+    function removeAlarmFromTable(alarm_id) {
+      document.getElementById('card-' + alarm_id)?.remove();
+      delete alarms[alarm_id];
+      renderAlarms();
+    }
+
+    function toggleEnable(id) {
+      alarms[id].disabled = alarms[id].disabled == true ? null : true;
+      renderAlarms(); // Re-render to show/hide the bubble and update buttons
+
+      window.webkit.messageHandlers.alarms_ui.postMessage({
+        action: 'save',
+        payload: alarms[id]
+      });
+    }
+
+    function openModal() {
+      editingAlarmId = null;
+      document.getElementById('modalTitle').innerText = 'Add Alarm';
+      document.getElementById('alarmTitle').value = '';
+      document.getElementById('alarmDesc').value = '';
+      document.getElementById('alarmValue').value = '';
+      document.getElementById('modalOverlay').setAttribute('open', 'true');
+    }
+
+    function editAlarm(id) {
+      const alarm = alarms[id];
+      editingAlarmId = id;
+
+      const type = !!alarm.cron ? 'cron' : !!alarm.timestamp ? 'timestamp' : 'duration';
+      const input = document.getElementById('alarmValue');
+
+      document.getElementById('modalTitle').innerText = 'Edit Alarm';
+      document.getElementById('alarmTitle').value = alarm.title || '';
+      document.getElementById('alarmDesc').value = alarm.desc || '';
+      document.querySelector(`input[name="alarmType"][value="${type}"]`).checked = true;
+
+      switch (type) {
+        case 'cron': {
+          input.value = !!alarm.cron ? alarm.cron : '';
+          break;
+        }
+        case 'timestamp': {
+          input.value = !!alarm.timestamp ? alarm.timestamp : '';
+          break;
+        }
+        case 'duration': {
+          input.value = !!alarm.duration ? alarm.duration : '';
+          break;
+        }
+      }
+      toggleType();
+
+      document.getElementById('modalOverlay').setAttribute('open', 'true');
+    }
+
+    function closeModal() {
+      document.getElementById('modalOverlay').removeAttribute('open');
+      editingAlarmId = null;
+    }
+
+    function postError(title, message) {
+      document.getElementById('errorTitle').innerText = title;
+      document.getElementById('errorMessage').innerText = message;
+      document.getElementById('errorOverlay').setAttribute('open', 'true');
+    }
+
+    function hideError() {
+      document.getElementById('errorOverlay').removeAttribute('open');
+    }
+
+    function toggleType() {
+      const type = document.querySelector('input[name="alarmType"]:checked').value;
+      const label = document.getElementById('valueLabel');
+      const input = document.getElementById('alarmValue');
+
+      if (type === 'duration') {
+        label.childNodes[0].textContent = 'Duration ';
+        input.placeholder = 'e.g., PT1H30M';
+        input.type = 'text';
+      } else if (type === 'timestamp') {
+        label.childNodes[0].textContent = 'Timestamp ';
+        input.placeholder = 'e.g., 2026-07-02T16:20:00, 16:20';
+        input.type = 'text';
+      } else if (type === 'cron') {
+        label.childNodes[0].textContent = 'Cron Schedule ';
+        input.placeholder = 'e.g., */15 * * * *';
+        input.type = 'text';
+      }
+    }
+
+    function saveAlarm() {
+      const title = document.getElementById('alarmTitle').value;
+      const desc = document.getElementById('alarmDesc').value;
+      const type = document.querySelector('input[name="alarmType"]:checked').value;
+      const value = document.getElementById('alarmValue').value;
+
+      const payload = {
+        title: title,
+        desc: desc
+      };
+
+      // If editing, preserve the ID and current disabled state
+      if (editingAlarmId) {
+        payload.id = editingAlarmId;
+        payload.disabled = alarms[editingAlarmId].disabled;
+      } else {
+        payload.disabled = null;
+      }
+
+      if (type == 'duration') {
+        payload.duration = value;
+      } else if (type == 'timestamp') {
+        payload.timestamp = value;
+      } else if (type == 'cron') {
+        payload.cron = value;
+      }
+
+      window.webkit.messageHandlers.alarms_ui.postMessage({
+        action: 'save',
+        payload: payload
+      });
+    }
+
+    renderAlarms();
+  </script>
+</body>
+
+</html>

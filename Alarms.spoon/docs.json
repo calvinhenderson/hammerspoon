@@ -1,0 +1,8 @@
+[
+  {
+    "name": "Alarms",
+    "desc": "Schedule pomodoro timers and other alarms.",
+    "doc": "Schedule pomodoro timers and other alarms.\n\nDownload: [https://github.com/calvinhenderson/hammerspoon/releases/download/latest/Application.spoon.zip](https://github.com/calvinhenderson/hammerspoon/releases/download/latest/Alarms.spoon.zip)",
+    "type": "Module"
+  }
+]
