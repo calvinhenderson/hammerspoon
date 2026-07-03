@@ -331,22 +331,8 @@ function Alarms:_parse_timestamp(timestamp)
 	return os.time(datetime)
 end
 
-function Alarms:_check_cron(now)
-	if not self._last_cron_check then
-		return true
-	elseif os.difftime(self._last_cron_check, os.time(now)) >= 60 then
-		return true
-	else
-		return false
-	end
-end
-
 function Alarms:_tick()
 	local now = os.date("*t")
-	local check_cron = self:_check_cron(now)
-	if check_cron then
-		self._last_cron_check = os.time(now) - now.sec
-	end
 
 	for _, alarm in pairs(self.alarms) do
 		if alarm.disabled then
@@ -355,7 +341,7 @@ function Alarms:_tick()
 			if os.difftime(self:_parse_timestamp(alarm.timestamp), os.time(now)) == 0 then
 				self:trigger(alarm)
 			end
-		elseif alarm.cron and check_cron then
+		elseif alarm.cron and now.sec == 0 then
 			local cron = Cron:parse(alarm.cron)
 			if Cron:matches(cron, now) then
 				self:trigger(alarm)
