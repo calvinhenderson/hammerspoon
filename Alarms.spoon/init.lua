@@ -3,6 +3,7 @@
 ---@field savePath? string The path where the alarms JSON store will be written.
 ---@field overlayColor? hs.drawing.color The light mode color of the overlay.
 ---@field overlayDarkColor? hs.drawing.color The dark mode color of the overlay. Defaults to light mode color if not specified
+---@field overlayFrame? hs.geometry|function The rectangle specifying the frame of the overlay or a function returning the frame.
 ---@field windowFrame? hs.geometry The rectangle specifying the frame of the ui window.
 ---@field keepPastAlarms? boolean Whether to keep one-off timers. Default is to delete past timers.
 
@@ -127,6 +128,33 @@ function Alarms:save_alarm(params)
 	return alarm
 end
 
+local function is_dark()
+	local _, dark =
+		hs.osascript.applescript('tell application "System Events" to return dark mode of appearance preferences')
+
+	return dark
+end
+
+---Gets the overlay attributes
+---@return {frame: hs.geometry, fill_color: hs.drawing.color}
+function Alarms:_get_overlay_attrs()
+	local attrs = {}
+
+	attrs.frame = (
+		(type(self.overlayFrame) == "function" and self.overlayFrame())
+		or (type(self.overlayFrame) == "table" and self.overlayFrame)
+		or assert(hs.screen.mainScreen():frame(), "could not get main screen frame")
+	)
+
+	attrs.fill_color = (
+		(is_dark() and self.overlayDarkColor)
+		or self.overlayColor
+		or { red = 1, green = 1, blue = 1, alpha = 1 }
+	)
+
+	return attrs
+end
+
 ---Triggers an alarm
 ---@param alarm_id string
 ---@return boolean triggered Whether the alarm was successfully triggered.
@@ -137,7 +165,6 @@ function Alarms:trigger(alarm_id)
 		self:reset_alarm(alarm)
 		self.state[alarm.id].cleanup:setNextTrigger(5)
 	else
-		local frame = assert(hs.screen.mainScreen():frame(), "could not get main screen frame")
 		self.state[alarm.id] = {
 
 			notification = assert(
@@ -159,10 +186,7 @@ function Alarms:trigger(alarm_id)
 				"could not create timer"
 			),
 
-			overlay = assert(
-				hs.canvas.new({ x = frame.x, y = frame.y, w = frame.w, h = frame.h }),
-				"could not create overlay canvas"
-			):insertElement({
+			overlay = assert(hs.canvas.new({ x = 0, y = 0, w = 0, h = 0 }), "could not create overlay canvas"):insertElement({
 				type = "rectangle",
 				id = "backdrop",
 			}),
@@ -181,14 +205,9 @@ function Alarms:trigger(alarm_id)
 	self.state[alarm.id].notification:subTitle(subTitle)
 	self.state[alarm.id].notification:send()
 
-	local fill_color = self.overlayColor or { red = 1, green = 1, blue = 1, alpha = 1 }
-	local _, is_dark =
-		hs.osascript.applescript('tell application "System Events" to return dark mode of appearance preferences')
-	if is_dark then
-		fill_color = self.overlayDarkColor or self.overlayColor or fill_color
-	end
-
-	self.state[alarm.id].overlay:elementAttribute(1, "fillColor", fill_color)
+	local attrs = self:_get_overlay_attrs()
+	self.state[alarm.id].overlay:frame(attrs.frame)
+	self.state[alarm.id].overlay:elementAttribute(1, "fillColor", attrs.fill_color)
 	self.state[alarm.id].overlay:show(0)
 	self.state[alarm.id].overlay:hide(5)
 
